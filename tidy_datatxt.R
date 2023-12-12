@@ -2,15 +2,17 @@ library(tidyverse)
 library(stringi)
 library(yaml)
 
+#Read the config file
 cfg <- read_yaml("config.yaml")
-# Set the working directory to  the problematic project or instrum --------
+#Set the working directory in the UVP6 directory
 uvp6_path <- cfg$Working_directory
 setwd(uvp6_path)
 
+#Store the name of the messy folder and the output folder
 project_path <- cfg$Project_to_clean
 new_cleaned_project <- cfg$Output_folder
 
-
+#Extract the name of all the files in the messy folder and extract the path of data.txt and vignettes
 full_files <- list.files(project_path, recursive = TRUE, full.names = TRUE)
 my_data <- full_files[stri_detect_regex(full_files, "data.txt")]
 my_vignettes <- full_files[stri_detect_regex(full_files, "(\\.vig)|(\\.raw)")]
@@ -19,20 +21,26 @@ my_vignettes <- full_files[stri_detect_regex(full_files, "(\\.vig)|(\\.raw)")]
 name_of_data_file <- unlist(stri_extract_all_regex(my_data, "([^\\/]+$)"))
 date_from_name <- unlist(stri_extract_all_regex(name_of_data_file, "[0-9]{8}\\-[0-9]{6}"))
 
+#Filter the unique dates
 unique_date <- unique(date_from_name)
 
+#Check which date are duplicated
 check <- data.frame(table(date_from_name))
-
 duplicates <- filter(check, Freq > 1)
 
-keeps <- c()
+###
+#We will loop through all unique date, check if we have multiple data.txt, in which case, we only keep the biggest file
+###
+
+#Initiate the memory of vectors
+keeps <- c() #will contain the path of the datatxt we keep
 sizes <- c()
 pb <- txtProgressBar(min = 1, max = nrow(check), style = 3)
 p = 1
 
 for(i in check$date_from_name){
   path_i <- paste0(i, "[^^\\/].*data.txt")
-  files_to_check <- my_data[stri_detect_regex(my_data, path_i)]
+  files_to_check <- my_data[stri_detect_regex(my_data, path_i)]#All the data.txt of the iteration date
   files_to_check_no_pax <- files_to_check[stri_detect_regex(files_to_check, "/PaxHeader/", negate = TRUE)] #Paxheader correspond to a folder where the data.txt is stored with no values in it. We want to delete them.
   for(j in 1:length(files_to_check_no_pax)){
     size_j <- file.info(files_to_check_no_pax[[j]])$size
@@ -52,10 +60,10 @@ for(i in check$date_from_name){
 
 # Make new directories for corresponding data_txt -------------------------
 
-
+#Now we need to create a new architecture of folder and to copy the data.txt in the appropriate place
 pb <- txtProgressBar(min = 1, max = length(keeps), style = 3)
 p = 1
-for(i in keeps){
+for(i in keeps){#Loop through the data.txt we want to keep
   
   #Initiate the right directory
   project <- cfg$Project_name
@@ -83,23 +91,27 @@ for(i in keeps){
 
 
 # Copy images from datatxt lines ------------------------------------------
+#Now that we have a clean architecure with the right data.txt we can safely copy vignettes in the img folders
 
-
+#List the datatxt and images folder of the NEW clean project
 files_path <- list.files(paste(new_cleaned_project, project, "raw", sep = "/"), full.names = TRUE, recursive = TRUE)
 datatxt_path <- files_path[stri_detect_regex(files_path, "data.txt")]
 images_path <- files_path[stri_detect_regex(files_path, "/images")]
 date_vig_list <- stri_extract_last_regex(my_vignettes, "[0-9]{8}\\-[0-9]{6}", simplify = TRUE)
 
+#we will loop over all the clean datatxt to get vignettes that correspond to all the dates of the files and check if we have the right amount of vignette, considering a given threshold in pixel.
+#Initiate vector storage
 list_of_diff <- c()
 date_list <- c()
 
+#Here 74 correspond to 620ESD, may be modified to be depend of the ACQ line
 threshold_in_pixel <- 74
 
 pb <- txtProgressBar(min = 1, max = length(datatxt_path), style = 3)
 p = 1
 
-for(i in seq_along(datatxt_path)){
-  #Then look into the data.txt
+for(i in seq_along(datatxt_path)){#For all dtatxt
+  #Look into the data.txt
   data_lines <- readLines(datatxt_path[i]) #Read the file
   hw_conf <- data_lines[1] #Read the hardware configuration
   acq_conf <- data_lines[3] #Read the acquisition configuration
@@ -111,6 +123,7 @@ for(i in seq_along(datatxt_path)){
   }
   
   #A loop to get all the lines that have at least one object above the pixel threshold. We want to keep info about overexposure as it may produce vignettes
+  #This loop only produce the number of expected vignettes 
   date_time_vignettes <- c()
   overexposed <- 0
   n_expected_vignettes <- 0
@@ -139,6 +152,7 @@ for(i in seq_along(datatxt_path)){
   }
   
   #Check if we find the same amount of files
+  #Get all the vig that have a date corresponding to a date of the datatxt
   date_from_lines <- stri_extract_all_regex(blocks, "[0-9]{8}\\-[0-9]{6}", simplify = TRUE) |> na.omit()
   vignettes_from_file <- my_vignettes[which(date_vig_list %in% date_from_lines)]
 
@@ -146,6 +160,7 @@ for(i in seq_along(datatxt_path)){
   
   vignette_names <- stri_extract_last_regex(vignettes_from_file, "[^/]+(\\.vig)|[^/]+(\\.raw)")
   
+  #Create a dataframe as it is easier to manipulate string and reconstruct the structure of the image path
   vignettes_list_unique <- data.frame(table(vignettes_from_file)) |>
     mutate(vig_name = stri_extract_last_regex(vignettes_from_file, "[^/]+(\\.vig)|[^/]+(\\.raw)"),
            vig_path = as.character(vignettes_from_file),
@@ -183,7 +198,7 @@ for(i in seq_along(datatxt_path)){
 error_data <- data.frame("date" = date_list, "diff" = list_of_diff)
 
 
-
+#An other code to compute the diff of vignettes number between the clean project and the expected number of vignettes.
 my_new_folders <- list.files(paste(new_cleaned_project, project, "raw", sep = "/"), full.names = TRUE)
 
 diff_results <- c()
@@ -232,9 +247,7 @@ sd(diff_results)
 
 results_df <- data.frame("date" = date_memory, "diff" = diff_results)
 
-#Pixel size = width of the pixel
-#Aa should be divied by 1 000 000
-
+#A small reminder of the equivalence between pixel size and threshold in ESD (see Picheral 2020)
 df <- data.frame("npix" = seq(1,100), "Aa" = 2300, "exp" = 1.136, "lpix" = 73) |> 
   mutate("s_um" = Aa * (npix^exp),
          "ESD_um" = 2*sqrt(s_um/pi))
