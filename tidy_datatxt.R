@@ -85,7 +85,7 @@ for(i in keeps){
 # Copy images from datatxt lines ------------------------------------------
 
 
-files_path <- list.files("uvp6_sn000002lp_clean/uvp6_sn000002lp_2023_sea002_m519/raw", full.names = TRUE, recursive = TRUE)
+files_path <- list.files(paste(new_cleaned_project, project, "raw", sep = "/"), full.names = TRUE, recursive = TRUE)
 datatxt_path <- files_path[stri_detect_regex(files_path, "data.txt")]
 images_path <- files_path[stri_detect_regex(files_path, "/images")]
 date_vig_list <- stri_extract_last_regex(my_vignettes, "[0-9]{8}\\-[0-9]{6}", simplify = TRUE)
@@ -184,7 +184,7 @@ error_data <- data.frame("date" = date_list, "diff" = list_of_diff)
 
 
 
-my_new_folders <- list.files("/remote/complex/piqv/plankton_rw/uvp6_missions/uvp6_sn000002lp_clean/uvp6_sn000002lp_2023_sea002_m519/raw_clean", full.names = TRUE)
+my_new_folders <- list.files(paste(new_cleaned_project, project, "raw", sep = "/"), full.names = TRUE)
 
 diff_results <- c()
 date_memory <- c()
@@ -195,9 +195,6 @@ t <- 0
 for(i in my_new_folders){
   n_vignettes <- length(list.files(paste0(i, "/images"), recursive = TRUE))
   datatxt <- list.files(i, full.names = TRUE)[grep("data", list.files(i))]
-  if(i == "/remote/complex/piqv/plankton_rw/uvp6_missions/uvp6_sn000002lp_clean/uvp6_sn000002lp_2023_sea002_m519/raw_clean/20230609-185425"){
-    datatxt <- datatxt[4]
-  }
   #Then look into the data.txt
   data_lines <- readLines(datatxt) #Read the file
   hw_conf <- data_lines[1] #Read the hardware configuration
