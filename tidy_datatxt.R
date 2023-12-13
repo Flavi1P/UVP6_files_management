@@ -46,7 +46,7 @@ for(i in check$date_from_name){
     size_j <- file.info(files_to_check_no_pax[[j]])$size
     sizes <- c(sizes, size_j)
   }
-  keep <- files_to_check_no_pax[[which.max(sizes)]]
+  keep <- files_to_check_no_pax[[which.min(sizes)]]
   keeps <- c(keeps, keep)
   sizes <- c()
   if(length(keep)>1){
@@ -196,7 +196,6 @@ for(i in seq_along(datatxt_path)){#For all dtatxt
 }
 
 error_data <- data.frame("date" = date_list, "diff" = list_of_diff)
-
 
 #An other code to compute the diff of vignettes number between the clean project and the expected number of vignettes.
 my_new_folders <- list.files(paste(new_cleaned_project, project, "raw", sep = "/"), full.names = TRUE)
