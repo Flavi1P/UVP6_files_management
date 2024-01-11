@@ -1,4 +1,5 @@
 Working_directory: /remote/complex/piqv/plankton_rw/uvp6_missions
-Project_to_clean: uvp6_sn000002lp/uvp6_sn000002lp_2023_sea002_m519
-Output_folder: /home/fpetit/complex/share/data_management/sn02lp_test
+Project_to_clean: uvp6_sn000002lp/uvp6_sn000002lp_2023_sea002_m519/raw_recup
+Output_folder: /home/fpetit/complex/share/data_management/sn02lp_final
 Project_name: uvp6_sn000002lp_2023_sea002_m519
+remove_one_line: True

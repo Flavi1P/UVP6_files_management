@@ -2,6 +2,7 @@ library(tidyverse)
 library(stringi)
 library(yaml)
 
+setwd("/remote/complex/home/fpetit/UVP6_files_management")
 #Read the config file
 cfg <- read_yaml("config.yaml")
 #Set the working directory in the UVP6 directory
@@ -29,7 +30,7 @@ check <- data.frame(table(date_from_name))
 duplicates <- filter(check, Freq > 1)
 
 ###
-#We will loop through all unique date, check if we have multiple data.txt, in which case, we only keep the biggest file
+#We will loop through all unique date, check if we have multiple data.txt, in which case, we only keep the smallest file (the biggest file are full of corrupted character)
 ###
 
 #Initiate the memory of vectors
@@ -71,6 +72,7 @@ for(i in keeps){#Loop through the data.txt we want to keep
   proj_path <- paste(new_cleaned_project, project, sep = "/")
   subproj_name <- stri_extract_last_regex(i, "[0-9]{8}\\-[0-9]{6}")
   path_to_copy_datatxt <- paste(new_cleaned_project, project, "raw", subproj_name, sep = "/")
+  path_to_write_datatxt <- paste0(path_to_copy_datatxt, "/", subproj_name, "_data.txt")
   
   #If the directory does not exist, create it
   if(!dir.exists(proj_path)){
@@ -82,7 +84,15 @@ for(i in keeps){#Loop through the data.txt we want to keep
     dir.create(paste(path_to_copy_datatxt, "images", sep = "/"))
   }
   #copy the data.txt
-  file.copy(from = i, to = path_to_copy_datatxt, overwrite = TRUE)
+  if(cfg$remove_one_line == TRUE){
+    temp_file <- readLines(i)
+    nlines_to_keep <- length(temp_file) - 1
+    temp_file <- temp_file[1:nlines_to_keep]
+    write_lines(temp_file, path_to_write_datatxt)
+  }
+  else{
+    file.copy(from = i, to = path_to_copy_datatxt, overwrite = TRUE)
+  }
   # Check if the copy was successful
   if (!file.exists(path_to_copy_datatxt)) {
     cat("Error in data copy.\n")
